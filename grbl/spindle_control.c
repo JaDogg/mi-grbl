@@ -39,7 +39,9 @@ void spindle_init()
   #ifndef USE_SPINDLE_DIR_AS_ENABLE_PIN
     SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
   #endif
-  spindle_stop();
+  //spindle_stop();
+  OCR_REGISTER = 9; // coloca o servo na posicão inicial normal
+//  OCR_REGISTER = 39; // coloca o servo na posicão inicial invertida
 }
 
 
@@ -70,7 +72,9 @@ void spindle_set_state(uint8_t state, float rpm)
   // Halt or set spindle direction and rpm. 
   if (state == SPINDLE_DISABLE) {
 
-    spindle_stop();
+// Volta para a posição inicial
+    OCR_REGISTER = 9; // Posição normal
+//    OCR_REGISTER = 39; // Posição invertida
 
   } else {
 
@@ -86,12 +90,12 @@ void spindle_set_state(uint8_t state, float rpm)
       // TODO: Install the optional capability for frequency-based output for servos.
       #ifdef CPU_MAP_ATMEGA2560
       	TCCRA_REGISTER = (1<<COMB_BIT) | (1<<WAVE1_REGISTER) | (1<<WAVE0_REGISTER);
-        TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x02 | (1<<WAVE2_REGISTER) | (1<<WAVE3_REGISTER); // set to 1/8 Prescaler
+        TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x07 | (1<<WAVE2_REGISTER) | (1<<WAVE3_REGISTER); // set to 1/1024 Prescaler
         OCR4A = 0xFFFF; // set the top 16bit value
         uint16_t current_pwm;
       #else
         TCCRA_REGISTER = (1<<COMB_BIT) | (1<<WAVE1_REGISTER) | (1<<WAVE0_REGISTER);
-        TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x02; // set to 1/8 Prescaler
+        TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x07; // set to 1/1024 Prescaler
         uint8_t current_pwm;
       #endif
 
@@ -103,7 +107,8 @@ void spindle_set_state(uint8_t state, float rpm)
           rpm -= SPINDLE_MIN_RPM; 
           if ( rpm > SPINDLE_RPM_RANGE ) { rpm = SPINDLE_RPM_RANGE; } // Prevent integer overflow
         }
-        current_pwm = floor( rpm*(PWM_MAX_VALUE/SPINDLE_RPM_RANGE) + 0.5);
+        current_pwm = floor( rpm*(30/SPINDLE_RPM_RANGE) + 9); // Direção Normal
+//		  current_pwm = floor( 39 - rpm*(30/SPINDLE_RPM_RANGE)); // Direção Invertida
         #ifdef MINIMUM_SPINDLE_PWM
           if (current_pwm < MINIMUM_SPINDLE_PWM) { current_pwm = MINIMUM_SPINDLE_PWM; }
         #endif
